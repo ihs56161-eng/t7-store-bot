@@ -89,7 +89,6 @@ class TicketSelectView(discord.ui.View):
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
-    # مسح أي أوامر وهمية قديمة من ديسكورد بشكل كامل
     try:
         bot.tree.clear_commands(guild=None)
         await bot.tree.sync()
@@ -110,9 +109,6 @@ async def panel(ctx):
     await ctx.send(embed=embed, view=TicketSelectView())
 
 
-TOKEN = os.getenv("TOKEN")
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("Error: TOKEN environment variable not found!")
-    
+# تشغيل البوت مباشرة بالتوكن الخاص بك
+TOKEN = "MTUzMzYxMzI3OTQ1MTI4NzU4Mw.GzjOaI.ykuH3agSeaGEP94LFZ_ETLvcgsQwEh-p288P5c"
+bot.run(TOKEN)
