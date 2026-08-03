@@ -1,7 +1,24 @@
 import os
 import discord
 from discord.ext import commands
+from flask import Flask
+from threading import Thread
 
+# 1. تشغيل سيرفر ويب خفيف في الخلفية عشان UptimeRobot
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "T7 Store Bot is Online and Active!"
+
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
+
+# 2. إعدادات بوت ديسكورد
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -10,7 +27,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # قاموس لتخزين الشخص الذي استلم التذكرة لكل روم
 claimed_tickets = {}
 
-# 1. أزرار التحكم داخل تذكرة الروم
+# أزرار التحكم داخل تذكرة الروم
 class TicketActionView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -46,7 +63,7 @@ class TicketActionView(discord.ui.View):
             await interaction.response.send_message("⚠️ لم يتم استلام هذه التذكرة من قبل أي مسؤول حتى يتم استدعاؤه!", ephemeral=True)
 
 
-# 2. القائمة المنسدلة (بدون قسم إضافي)
+# القائمة المنسدلة
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -55,7 +72,7 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="شراء", description="هذا الخيار مخصص لشراء منتج او شي ثاني", emoji="🛒", value="شراء"),
             discord.SelectOption(label="مشكله في الحساب", description="مثال لهذه الخيار مثال اذا الحساب مبند او كلمه السر غير صحيحه", emoji="⚠️", value="مشكله في الحساب")
         ]
-        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v8")
+        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v10")
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -96,7 +113,7 @@ async def on_ready():
         print(e)
 
 
-# أمر إنشاء القائمة (بالكلام المطلوب تماماً مطابق للصورة)
+# أمر إنشاء القائمة
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def panel(ctx):
@@ -116,10 +133,12 @@ async def panel(ctx):
     await ctx.send(embed=embed, view=TicketSelectView())
 
 
-# سحب التوكن بأمان من إعدادات ريندر (Environment Variables)
-TOKEN = os.getenv("TOKEN")
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("Error: TOKEN environment variable not found!")
-
+# تشغيل سيرفر الويب وسحب التوكن بأمان من إعدادات Render
+if __name__ == "__main__":
+    keep_alive()
+    TOKEN = os.getenv("TOKEN")
+    if not TOKEN:
+        print("Error: TOKEN is not set in environment variables!")
+    else:
+        bot.run(TOKEN)
+        
