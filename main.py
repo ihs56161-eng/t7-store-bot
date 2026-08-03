@@ -1,9 +1,11 @@
+import os
 import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import Button, View, Select
 
-TOKEN = "MTUzMzYxMzI3OTQ1MTI4NzU4Mw.Gnanx-.KeuWL5EfeOnkGfpKPez6krOddIMW1x2oN1Dou4"
+# سحب التوكن بشكل مخفي وآمن من إعدادات الاستضافة (Render)
+TOKEN = os.environ.get("TOKEN")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -100,4 +102,6 @@ async def on_ready():
     except Exception as e:
         print(e)
 
+# تشغيل البوت باستخدام التوكن المخفي
 bot.run(TOKEN)
+    
