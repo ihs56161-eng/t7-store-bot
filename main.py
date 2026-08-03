@@ -46,17 +46,16 @@ class TicketActionView(discord.ui.View):
             await interaction.response.send_message("⚠️ لم يتم استلام هذه التذكرة من قبل أي مسؤول حتى يتم استدعاؤه!", ephemeral=True)
 
 
-# 2. القائمة المنسدلة الخمسة خيارات
+# 2. القائمة المنسدلة (بدون قسم إضافي)
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
             discord.SelectOption(label="الدعم الفني", description="فتح تذكره لطلب الدعم الفني و الاستفسار", emoji="🛠️", value="الدعم الفني"),
             discord.SelectOption(label="طلب وسيط", description="طلب وسيط لضمان حقك", emoji="🤝", value="طلب وسيط"),
             discord.SelectOption(label="شراء", description="هذا الخيار مخصص لشراء منتج او شي ثاني", emoji="🛒", value="شراء"),
-            discord.SelectOption(label="قسم إضافي", description="خيار مخصص حسب طلبك", emoji="📌", value="قسم إضافي"),
             discord.SelectOption(label="مشكله في الحساب", description="مثال لهذه الخيار مثال اذا الحساب مبند او كلمه السر غير صحيحه", emoji="⚠️", value="مشكله في الحساب")
         ]
-        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v5")
+        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v8")
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -97,21 +96,30 @@ async def on_ready():
         print(e)
 
 
-# أمر إنشاء القائمة
+# أمر إنشاء القائمة (بالكلام المطلوب تماماً مطابق للصورة)
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def panel(ctx):
     embed = discord.Embed(
-        title="🎫 نظام تذاكر متجر T7",
-        description="اختر خيار التذكرة المناسب لك من القائمة أدناه:",
-        color=discord.Color.blue()
+        description="""🎟️ **مرحبًا بك في نظام التذاكر!**
+
+إذا كنت تحتاج مساعدة، أو لديك استفسار، أو تواجه مشكلة، أو ترغب بالتواصل مع الإدارة، اضغط على الزر أدناه لفتح تذكرة.
+
+**يرجى:**
+• شرح مشكلتك أو طلبك بوضوح.
+• عدم فتح أكثر من تذكرة لنفس السبب.
+• التحلي بالاحترام أثناء التحدث مع فريق الدعم.
+
+⏱️ **سيتم الرد عليك في أقرب وقت ممكن.**""",
+        color=discord.Color.from_rgb(45, 45, 45)
     )
     await ctx.send(embed=embed, view=TicketSelectView())
 
 
+# سحب التوكن بأمان من إعدادات ريندر (Environment Variables)
 TOKEN = os.getenv("TOKEN")
 if TOKEN:
     bot.run(TOKEN)
 else:
     print("Error: TOKEN environment variable not found!")
-    
+
