@@ -46,7 +46,7 @@ class TicketActionView(discord.ui.View):
             await interaction.response.send_message("⚠️ لم يتم استلام هذه التذكرة من قبل أي مسؤول حتى يتم استدعاؤه!", ephemeral=True)
 
 
-# 2. القائمة المنسدلة (مطابقة لصورتك تماماً)
+# 2. القائمة المنسدلة الخمسة خيارات
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -56,7 +56,7 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="قسم إضافي", description="خيار مخصص حسب طلبك", emoji="📌", value="قسم إضافي"),
             discord.SelectOption(label="مشكله في الحساب", description="مثال لهذه الخيار مثال اذا الحساب مبند او كلمه السر غير صحيحه", emoji="⚠️", value="مشكله في الحساب")
         ]
-        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v4")
+        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v5")
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -92,7 +92,7 @@ async def on_ready():
     try:
         bot.tree.clear_commands(guild=None)
         await bot.tree.sync()
-        print("Cleared and synced tree commands successfully.")
+        print("Commands synced successfully.")
     except Exception as e:
         print(e)
 
@@ -109,6 +109,9 @@ async def panel(ctx):
     await ctx.send(embed=embed, view=TicketSelectView())
 
 
-# تشغيل البوت مباشرة بالتوكن الخاص بك
-TOKEN = "MTUzMzYxMzI3OTQ1MTI4NzU4Mw.GzjOaI.ykuH3agSeaGEP94LFZ_ETLvcgsQwEh-p288P5c"
-bot.run(TOKEN)
+TOKEN = os.getenv("TOKEN")
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("Error: TOKEN environment variable not found!")
+    
