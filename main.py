@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 from discord.ui import Button, View, Select
 
-TOKEN = "MTUzMzYxMzI3OTQ1MTI4NzU4Mw.GZZabf.QiDfBswOrK6OICdwPkUjpL5d1pzVBEfoNaT-o0"
+TOKEN = "MTUzMzYxMzI3OTQ1MTI4NzU4Mw.Gnanx-.KeuWL5EfeOnkGfpKPez6krOddIMW1x2oN1Dou4"
 
 intents = discord.Intents.default()
 intents.message_content = True
