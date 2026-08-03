@@ -10,7 +10,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # قاموس لتخزين الشخص الذي استلم التذكرة لكل روم
 claimed_tickets = {}
 
-# 1. أزرار التحكم داخل تذكرة الروم (قفل، استلام، إلغاء استلام، استدعاء)
+# 1. أزرار التحكم داخل تذكرة الروم
 class TicketActionView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -46,42 +46,17 @@ class TicketActionView(discord.ui.View):
             await interaction.response.send_message("⚠️ لم يتم استلام هذه التذكرة من قبل أي مسؤول حتى يتم استدعاؤه!", ephemeral=True)
 
 
-# 2. القائمة المنسدلة مطابقة لصورتك تماماً
+# 2. القائمة المنسدلة (مطابقة لصورتك تماماً)
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(
-                label="الدعم الفني", 
-                description="فتح تذكره لطلب الدعم الفني و الاستفسار", 
-                emoji="🛠️", 
-                value="الدعم الفني"
-            ),
-            discord.SelectOption(
-                label="طلب وسيط", 
-                description="طلب وسيط لضمان حقك", 
-                emoji="🤝", 
-                value="طلب وسيط"
-            ),
-            discord.SelectOption(
-                label="شراء", 
-                description="هذا الخيار مخصص لشراء منتج او شي ثاني", 
-                emoji="🛒", 
-                value="شراء"
-            ),
-            discord.SelectOption(
-                label="قسم إضافي", 
-                description="خيار مخصص حسب طلبك", 
-                emoji="📌", 
-                value="قسم إضافي"
-            ),
-            discord.SelectOption(
-                label="مشكله في الحساب", 
-                description="مثال لهذه الخيار مثال اذا الحساب مبند او كلمه السر غير صحيحه", 
-                emoji="⚠️", 
-                value="مشكله في الحساب"
-            )
+            discord.SelectOption(label="الدعم الفني", description="فتح تذكره لطلب الدعم الفني و الاستفسار", emoji="🛠️", value="الدعم الفني"),
+            discord.SelectOption(label="طلب وسيط", description="طلب وسيط لضمان حقك", emoji="🤝", value="طلب وسيط"),
+            discord.SelectOption(label="شراء", description="هذا الخيار مخصص لشراء منتج او شي ثاني", emoji="🛒", value="شراء"),
+            discord.SelectOption(label="قسم إضافي", description="خيار مخصص حسب طلبك", emoji="📌", value="قسم إضافي"),
+            discord.SelectOption(label="مشكله في الحساب", description="مثال لهذه الخيار مثال اذا الحساب مبند او كلمه السر غير صحيحه", emoji="⚠️", value="مشكله في الحساب")
         ]
-        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v3")
+        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v4")
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -114,8 +89,16 @@ class TicketSelectView(discord.ui.View):
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
+    # مسح أي أوامر وهمية قديمة من ديسكورد بشكل كامل
+    try:
+        bot.tree.clear_commands(guild=None)
+        await bot.tree.sync()
+        print("Cleared and synced tree commands successfully.")
+    except Exception as e:
+        print(e)
 
 
+# أمر إنشاء القائمة
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def panel(ctx):
