@@ -59,17 +59,17 @@ class TicketSelect(Select):
             ),
             discord.SelectOption(
                 label="طلب وسيط درجة اولى", 
-                description="لطلب وسيط تجاري درجة اولى", 
+                description="لطلب وسيط درجة اولى", 
                 emoji="<:emoji_11:1534202727880589424>"
             ),
             discord.SelectOption(
                 label="طلب وسيط درجة ثانيه", 
-                description="لطلب وسيط تجاري درجة ثانيه", 
+                description="لطلب وسيط درجة ثانيه", 
                 emoji="<:emoji_11:1534202743282204743>"
             ),
             discord.SelectOption(
                 label="طلب وسيط درجة ثالثه", 
-                description="لطلب وسيط تجاري درجة ثالثه", 
+                description="لطلب وسيط درجة ثالثه", 
                 emoji="<:emoji_12:1534202761238020106>"
             )
         ]
