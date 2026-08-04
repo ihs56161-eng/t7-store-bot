@@ -68,7 +68,7 @@ class TicketSelect(Select):
         )
 
         embed = discord.Embed(
-            title="<:828044ticket:1527549672175046668> تذكرة جديدة",
+            title="<:emoji_10:1534076771039838370> تذكرة جديدة",
             description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
@@ -108,7 +108,7 @@ class TicketControlView(View):
 @commands.has_permissions(administrator=True)
 async def setticket(ctx):
     embed = discord.Embed(
-        title="<:828044ticket:1527549672175046668> مرحبًا بك في نظام التذاكر!",
+        title="<:emoji_10:1534076771039838370> مرحبًا بك في نظام التذاكر!",
         description=(
             "إذا كنت تحتاج مساعدة، أو لديك استفسار، أو تواجه مشكلة، أو ترغب بالتواصل مع الإدارة، اضغط على الزر أدناه لفتح تذكرة.\n\n"
             "يرجى:\n"
