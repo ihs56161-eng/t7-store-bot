@@ -1,10 +1,28 @@
 import discord
 from discord.ext import commands
 from discord.ui import Select, View, Button
+from flask import Flask
+from threading import Thread
+import os
 
+# إعداد سيرفر الفلاسك عشان UptimeRobot يخليه صاحي 24/7
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "T7-STORE Bot is online!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.start()
+
+# إعدادات البوت
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-# ----------------- قائمة اختيار التذاكر (Dropdown) -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -28,40 +46,30 @@ class TicketSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
-        category = discord.utils.get(guild.categories, name="TICKETS") # اسم الكاتيجوري اللي تبيه ينفتح فيه التكت
+        category = discord.utils.get(guild.categories, name="TICKETS")
         if not category:
             category = await guild.create_category("TICKETS")
 
-        # إعطاء صلاحيات الرؤية فقط لصاحب التذكرة والإدارة
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-            # تقدر تضيف رتبة الإدارة هنا بمعرف الرتبة:
-            # guild.get_role(رتبة_الإدارة_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
 
-        # إنشاء روم التذكرة
         channel = await guild.create_text_channel(
             name=f"ticket-{interaction.user.name}",
             category=category,
             overwrites=overwrites
         )
 
-        # رسالة داخل التكت مع منشن العضو ورتبة الإدارة (مثال توضيحي)
         embed = discord.Embed(
             title="<:828044ticket:1527549672175046668> تذكرة جديدة",
-            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا، وسيظهر لك فقط صاحب التكت والرتبة المختصة.\nMaDe FoR T7 STORE .",
-            color=0x9B59B6 # لون بنفسجي فخم
+            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
+            color=0x9B59B6
         )
         embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
 
-        # أزرار داخل التكت (قفل واستلام)
         view = TicketControlView()
-        
-        # منشن الإدارة والعضو
-        staff_role_mention = "@here" # تقدر تبدلها بمنشن رتبة الإدارة الفعلي
-        await channel.send(content=f"{interaction.user.mention} {staff_role_mention}", embed=embed, view=view)
-        
+        await channel.send(content=f"{interaction.user.mention} @here", embed=embed, view=view)
         await interaction.response.send_message(f"✅ تم فتح تذكرتك بنجاح: {channel.mention}", ephemeral=True)
 
 class TicketView(View):
@@ -69,7 +77,6 @@ class TicketView(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-# ----------------- أزرار التحكم داخل التكت -----------------
 class TicketControlView(View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -86,9 +93,8 @@ class TicketControlView(View):
         button.disabled = True
         button.label = f"تم الاستلام بواسطة {interaction.user.name}"
         await interaction.message.edit(view=self)
-        await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام هذه التذكرة وخدمتك!")
+        await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام التذكرة!")
 
-# ----------------- أمر إرسال رسالة التذاكر الأساسية -----------------
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def setticket(ctx):
@@ -100,20 +106,23 @@ async def setticket(ctx):
             "• شرح مشكلتك أو طلبك بوضوح.\n"
             "• عدم فتح أكثر من تذكرة لنفس السبب.\n"
             "• التحلي بالاحترام أثناء التحدث مع فريق الدعم.\n\n"
-            "<a:emoji_9:1534068709541548183> سيتم الرد عليك في أقرب وقت ممكن."
+            "<a:emoji_9:1534068709541548183> سيتم الرد عليك في أقرب وقت ممکن."
         ),
-        color=0x9B59B6 # اللون البنفسجي الفخم
+        color=0x9B59B6
     )
     if ctx.guild.icon:
         embed.set_thumbnail(url=ctx.guild.icon.url)
     
     view = TicketView()
     await ctx.send(embed=embed, view=view)
-    await ctx.message.delete() # حذف أمر الكاتب لتبقى الرسالة نظيفة
+    await ctx.message.delete()
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name} - T7 STORE Bot is ready!")
 
-# ضع توكن بوتك هنا
-# bot.run("YOUR_BOT_TOKEN")
+# تشغيل سيرفر الفلاسك في الخلفية أولاً
+keep_alive()
+
+# تشغيل البوت بالتوكن حقك (حط التوكن بين العلامتين)
+bot.run("حط_التوكن_هنا")
