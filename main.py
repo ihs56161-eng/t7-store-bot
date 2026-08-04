@@ -26,8 +26,11 @@ bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 # ==========================================
 # ⚙️ [إعدادات الرتب المحددة]
 # ==========================================
-ROLE_STAFF = 1525954290450043091     # رتبة الاستاف (للإستفسار والشكوى)
-ROLE_SCAM = 1533127895390621866      # رتبة تشهير السراقين
+ROLE_STAFF = 1525954290450043091          # رتبة الاستاف (للإستفسار والشكوى والشراء)
+ROLE_SCAM = 1533127895390621866           # رتبة تشهير السراقين
+ROLE_MIDDLEMAN_1 = 1526627172276502591    # رتبة وسيط درجة أولى
+ROLE_MIDDLEMAN_2 = 153420274328           # رتبة وسيط درجة ثانية
+ROLE_MIDDLEMAN_3 = 1526627045247946843    # رتبة وسيط درجة ثالثة
 # ==========================================
 
 # ----------------- القائمة المنسدلة للتذاكر الرئيسية -----------------
@@ -45,40 +48,77 @@ class TicketSelect(Select):
                 emoji="<a:emoji_7:1526263693615173824>"
             ),
             discord.SelectOption(
+                label="شراء", 
+                description="هذا الخيار مخصص لشراء الأسلحة أو الحسابات", 
+                emoji="<a:emoji_7:1526263667736187072>"
+            ),
+            discord.SelectOption(
                 label="تشهير سراقين", 
                 description="للتشهير أو البلاغات المتعلقة بالسراقين", 
                 emoji="<:emoji_3:1526260783263125635>"
+            ),
+            discord.SelectOption(
+                label="طلب وسيط درجة اولى", 
+                description="لطلب وسيط تجاري درجة اولى", 
+                emoji="<:emoji_11:1534202727880589424>"
+            ),
+            discord.SelectOption(
+                label="طلب وسيط درجة ثانيه", 
+                description="لطلب وسيط تجاري درجة ثانيه", 
+                emoji="<:emoji_11:1534202743282204743>"
+            ),
+            discord.SelectOption(
+                label="طلب وسيط درجة ثالثه", 
+                description="لطلب وسيط تجاري درجة ثالثه", 
+                emoji="<:emoji_12:1534202761238020106>"
             )
         ]
         super().__init__(placeholder="اختر خيار التذكرة...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
+        user = interaction.user
+
+        # ----------------- [التحقق من عدم وجود تذكرة مفتوحة مسبقاً] -----------------
+        existing_channel = discord.utils.get(guild.text_channels, name=f"ticket-{user.name.lower()}")
+        if existing_channel:
+            await interaction.response.send_message(f"❌ عذراً، لديك تذكرة مفتوحة بالفعل ولا يمكنك فتح أكثر من تذكرة: {existing_channel.mention}", ephemeral=True)
+            return
+
         category = discord.utils.get(guild.categories, name="TICKETS")
         if not category:
             category = await guild.create_category("TICKETS")
 
         selected_value = self.values[0]
-        target_role_id = ROLE_STAFF if selected_value in ["استفسار", "شكوى"] else ROLE_SCAM
+        
+        # تحديد الرتبة المستجيبة حسب الخيار
+        target_role_id = ROLE_STAFF
+        if selected_value == "تشهير سراقين":
+            target_role_id = ROLE_SCAM
+        elif selected_value == "طلب وسيط درجة اولى":
+            target_role_id = ROLE_MIDDLEMAN_1
+        elif selected_value == "طلب وسيط درجة ثانيه":
+            target_role_id = ROLE_MIDDLEMAN_2
+        elif selected_value == "طلب وسيط درجة ثالثه":
+            target_role_id = ROLE_MIDDLEMAN_3
 
         # إنشاء الروم (مرئي للجميع)
         channel = await guild.create_text_channel(
-            name=f"ticket-{interaction.user.name}",
+            name=f"ticket-{user.name}",
             category=category
         )
 
         embed = discord.Embed(
             title="<:emoji_10:1534076771039838370> تذكرة جديدة",
-            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{selected_value}**\n\nاكتب تفاصيلك هنا.\nسيقوم الإستاف بالرد عليك قريباً.\nMaDe FoR T7 STORE .",
+            description=f"مرحباً بك {user.mention}!\nنوع التذكرة: **{selected_value}**\n\nاكتب تفاصيلك هنا.\nسيقوم المختص بالرد عليك قريباً.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
-        # إرسال الأزرار المخصصة للإستاف فقط داخل التذكرة
         view = StaffControlView()
         
-        ping_content = f"{interaction.user.mention}"
+        ping_content = f"{user.mention}"
         role = guild.get_role(target_role_id)
         if role:
             ping_content += f" {role.mention}"
@@ -96,13 +136,13 @@ class StaffControlView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    # التحقق مما إذا كان المستخدم يمتلك رتبة الإستاف أو صلاّحية الأدمن قبل تنفيذ الأزرار
+    # التحقق من صلاحيات الإستاف أو الرتب الخاصة بالوساطة
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # السماح للأدمن أو من يحمل رتبة الإستاف أو السراقين بالضغط على الأزرار
-        has_permission = any(role.id in [ROLE_STAFF, ROLE_SCAM] for role in interaction.user.roles) or interaction.user.guild_permissions.administrator
+        allowed_roles = [ROLE_STAFF, ROLE_SCAM, ROLE_MIDDLEMAN_1, ROLE_MIDDLEMAN_2, ROLE_MIDDLEMAN_3]
+        has_permission = any(role.id in allowed_roles for role in interaction.user.roles) or interaction.user.guild_permissions.administrator
         
         if not has_permission:
-            await interaction.response.send_message("❌ عذراً، هذه الأزرار مخصصة للإستاف فقط!", ephemeral=True)
+            await interaction.response.send_message("❌ عذراً، هذه الأزرار مخصصة للإستاف والمختصين فقط!", ephemeral=True)
             return False
         return True
 
@@ -111,7 +151,6 @@ class StaffControlView(View):
         button.disabled = True
         button.label = f"تم الاستلام بواسطة {interaction.user.name}"
         
-        # إضافة زر إلغاء الاستلام وتحديث اللوحة
         self.add_item(UnclaimButton())
         await interaction.message.edit(view=self)
         await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام التذكرة!")
@@ -123,19 +162,17 @@ class StaffControlView(View):
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
-# زر إضافي: إلغاء الاستلام
+# زر إلغاء الاستلام
 class UnclaimButton(Button):
     def __init__(self):
         super().__init__(label="إلغاء الاستلام", style=discord.ButtonStyle.secondary, emoji="↩️")
 
     async def callback(self, interaction: discord.Interaction):
-        # إعادة تفعيل زر الاستلام الأصلي أو تعديله
         for child in self.view.children:
             if child.label and "تم الاستلام" in child.label:
                 child.disabled = False
                 child.label = "استلام التكت"
         
-        # إزالة زر إلغاء الاستلام نفسه من القائمة
         self.view.remove_item(self)
         await interaction.message.edit(view=self.view)
         await interaction.response.send_message(f"↩️ تم إلغاء استلام التذكرة بواسطة {interaction.user.mention}", ephemeral=True)
@@ -176,3 +213,4 @@ keep_alive()
 # سحب التوكن خفياً من متغيرات البيئة في ريندر
 TOKEN = os.environ.get("TOKEN")
 bot.run(TOKEN)
+    
