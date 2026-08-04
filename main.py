@@ -23,27 +23,32 @@ def keep_alive():
 # إعداد البوت
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-# ----------------- القائمة المنسدلة للتذاكر -----------------
+# ----------------- القائمة المنسدلة للتذاكر (الخيارات الأربعة الجديدة) -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
             discord.SelectOption(
-                label="استفسار عام", 
+                label="استفسار", 
                 description="للاستفسارات والأسئلة العامة", 
-                emoji="<:828044ticket:1527549672175046668>"
+                emoji="❓"
             ),
             discord.SelectOption(
-                label="شكوى / مشكلة", 
-                description="لتقديم شكوى أو الإبلاغ عن مشكلة", 
+                label="شكوى", 
+                description="لتقديم شكوى مباشرة", 
+                emoji="✉️"
+            ),
+            discord.SelectOption(
+                label="تشهير سراقين", 
+                description="للتشهير أو البلاغات المتعلقة بالسراقين", 
+                emoji="📌"
+            ),
+            discord.SelectOption(
+                label="أخرى / مشاكل حسابات", 
+                description="للمشاكل الأخرى المتعلقة بالحسابات", 
                 emoji="⚠️"
-            ),
-            discord.SelectOption(
-                label="شراء / طلب", 
-                description="لشراء منتج أو طلب خدمة", 
-                emoji="🛒"
             )
         ]
-        super().__init__(placeholder="اختر خيار التذكرة...", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="اختر نوع التذكرة...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -57,14 +62,14 @@ class TicketSelect(Select):
         }
 
         channel = await guild.create_text_channel(
-            name=f"ticket-{interaction.user.name}",
+            name=f"complaint-{interaction.user.name}",
             category=category,
             overwrites=overwrites
         )
 
         embed = discord.Embed(
             title="<:828044ticket:1527549672175046668> تذكرة جديدة",
-            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
+            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا، وسيظهر لك فقط صاحب التكت والرتبة المختصة.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
         if guild.icon:
