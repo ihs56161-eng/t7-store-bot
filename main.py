@@ -23,7 +23,14 @@ def keep_alive():
 # إعداد البوت
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-# ----------------- القائمة المنسدلة للتذاكر الجديدة -----------------
+# ==========================================
+# ⚙️ [إعدادات الرتب المحددة]
+# ==========================================
+ROLE_STAFF = 1525954290450043091     # رتبة الاستاف (للإستفسار والشكوى)
+ROLE_SCAM = 1533127895390621866      # رتبة تشهير السراقين
+# ==========================================
+
+# ----------------- القائمة المنسدلة للتذاكر -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -51,27 +58,41 @@ class TicketSelect(Select):
         if not category:
             category = await guild.create_category("TICKETS")
 
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-        }
+        selected_value = self.values[0]
+        target_role_id = None
 
+        # ربط كل خيار بالآييدي الصحيح
+        if selected_value == "استفسار":
+            target_role_id = ROLE_STAFF
+        elif selected_value == "شكوى":
+            target_role_id = ROLE_STAFF
+        elif selected_value == "تشهير سراقين":
+            target_role_id = ROLE_SCAM
+
+        # إنشاء الروم (مرئي للجميع)
         channel = await guild.create_text_channel(
             name=f"ticket-{interaction.user.name}",
-            category=category,
-            overwrites=overwrites
+            category=category
         )
 
         embed = discord.Embed(
             title="<:emoji_10:1534076771039838370> تذكرة جديدة",
-            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
+            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{selected_value}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
         view = TicketControlView()
-        await channel.send(content=f"{interaction.user.mention} @here", embed=embed, view=view)
+        
+        # تجهيز المنشن (صاحب التذكرة + الرتبة المخصصة للقسم)
+        ping_content = f"{interaction.user.mention}"
+        if target_role_id:
+            role = guild.get_role(target_role_id)
+            if role:
+                ping_content += f" {role.mention}"
+
+        await channel.send(content=ping_content, embed=embed, view=view)
         await interaction.response.send_message(f"✅ تم فتح تذكرتك بنجاح: {channel.mention}", ephemeral=True)
 
 class TicketView(View):
