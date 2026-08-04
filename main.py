@@ -23,7 +23,7 @@ def keep_alive():
 # إعداد البوت
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-# ----------------- القائمة المنسدلة للتذاكر (الخيارات الأربعة الجديدة) -----------------
+# ----------------- القائمة المنسدلة للتذاكر -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -48,7 +48,7 @@ class TicketSelect(Select):
                 emoji="⚠️"
             )
         ]
-        super().__init__(placeholder="اختر نوع التذكرة...", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="اختر خيار التذكرة...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -62,14 +62,14 @@ class TicketSelect(Select):
         }
 
         channel = await guild.create_text_channel(
-            name=f"complaint-{interaction.user.name}",
+            name=f"ticket-{interaction.user.name}",
             category=category,
             overwrites=overwrites
         )
 
         embed = discord.Embed(
             title="<:828044ticket:1527549672175046668> تذكرة جديدة",
-            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا، وسيظهر لك فقط صاحب التكت والرتبة المختصة.\nMaDe FoR T7 STORE .",
+            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
         if guild.icon:
@@ -136,6 +136,6 @@ async def on_ready():
 # تشغيل السيرفر والبوت
 keep_alive()
 
-# سحب التوكن خفياً من إعدادات البيئة (Environment Variables) في Render
+# سحب التوكن خفياً من متغيرات البيئة في ريندر
 TOKEN = os.environ.get("TOKEN")
 bot.run(TOKEN)
