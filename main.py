@@ -23,29 +23,24 @@ def keep_alive():
 # إعداد البوت
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-# ----------------- القائمة المنسدلة للتذاكر -----------------
+# ----------------- القائمة المنسدلة للتذاكر الجديدة -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
             discord.SelectOption(
                 label="استفسار", 
-                description="للاستفسارات والأسئلة العامة", 
-                emoji="❓"
+                description="للاستفسارات ومشاكل الحساب العامة", 
+                emoji="<:emoji_14:1534202781320351994>"
             ),
             discord.SelectOption(
                 label="شكوى", 
-                description="لتقديم شكوى مباشرة", 
-                emoji="✉️"
+                description="لتقديم شكوى مباشرة أو مشكلة متعلقة بالحساب", 
+                emoji="<a:emoji_7:1526263693615173824>"
             ),
             discord.SelectOption(
                 label="تشهير سراقين", 
                 description="للتشهير أو البلاغات المتعلقة بالسراقين", 
-                emoji="📌"
-            ),
-            discord.SelectOption(
-                label="أخرى / مشاكل حسابات", 
-                description="للمشاكل الأخرى المتعلقة بالحسابات", 
-                emoji="⚠️"
+                emoji="<:emoji_3:1526260783263125635>"
             )
         ]
         super().__init__(placeholder="اختر خيار التذكرة...", min_values=1, max_values=1, options=options)
