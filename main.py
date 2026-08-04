@@ -1,144 +1,119 @@
-import os
 import discord
 from discord.ext import commands
-from flask import Flask
-from threading import Thread
+from discord.ui import Select, View, Button
 
-# 1. تشغيل سيرفر ويب خفيف في الخلفية عشان UptimeRobot
-app = Flask('')
+bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
-@app.route('/')
-def home():
-    return "T7 Store Bot is Online and Active!"
-
-def run_web():
-    app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run_web)
-    t.start()
-
-# 2. إعدادات بوت ديسكورد
-intents = discord.Intents.default()
-intents.message_content = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-# قاموس لتخزين الشخص الذي استلم التذكرة لكل روم
-claimed_tickets = {}
-
-# أزرار التحكم داخل تذكرة الروم
-class TicketActionView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="قفل التذكرة", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_ticket")
-    async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("جاري قفل التذكرة وحذف الروم...", ephemeral=True)
-        await interaction.channel.delete()
-
-    @discord.ui.button(label="استلام التذكرة", style=discord.ButtonStyle.success, emoji="🙋‍♂️", custom_id="claim_ticket")
-    async def claim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        claimed_tickets[interaction.channel.id] = interaction.user.id
-        await interaction.response.send_message(f"✅ تم استلام التذكرة بواسطة: {interaction.user.mention}")
-
-    @discord.ui.button(label="إلغاء الاستلام", style=discord.ButtonStyle.secondary, emoji="↩️", custom_id="unclaim_ticket")
-    async def unclaim_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.channel.id in claimed_tickets:
-            del claimed_tickets[interaction.channel.id]
-            await interaction.response.send_message(f"🔄 تم إلغاء استلام التذكرة بواسطة: {interaction.user.mention}")
-        else:
-            await interaction.response.send_message("⚠️ هذه التذكرة لم يتم استلامها أساساً!", ephemeral=True)
-
-    @discord.ui.button(label="استدعاء المسؤول", style=discord.ButtonStyle.primary, emoji="🔔", custom_id="call_staff")
-    async def call_staff(self, interaction: discord.Interaction, button: discord.ui.Button):
-        staff_id = claimed_tickets.get(interaction.channel.id)
-        if staff_id:
-            staff_member = interaction.guild.get_member(staff_id)
-            if staff_member:
-                await interaction.response.send_message(f"🔔 تم استدعاؤك يا {staff_member.mention}! صاحب التذكرة يناديك هنا.")
-            else:
-                await interaction.response.send_message("⚠️ المسؤول الذي استلم التذكرة غير موجود حالياً في السيرفر.", ephemeral=True)
-        else:
-            await interaction.response.send_message("⚠️ لم يتم استلام هذه التذكرة من قبل أي مسؤول حتى يتم استدعاؤه!", ephemeral=True)
-
-
-# القائمة المنسدلة
-class TicketSelect(discord.ui.Select):
+# ----------------- قائمة اختيار التذاكر (Dropdown) -----------------
+class TicketSelect(Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="الدعم الفني", description="فتح تذكره لطلب الدعم الفني و الاستفسار", emoji="🛠️", value="الدعم الفني"),
-            discord.SelectOption(label="طلب وسيط", description="طلب وسيط لضمان حقك", emoji="🤝", value="طلب وسيط"),
-            discord.SelectOption(label="شراء", description="هذا الخيار مخصص لشراء منتج او شي ثاني", emoji="🛒", value="شراء"),
-            discord.SelectOption(label="مشكله في الحساب", description="مثال لهذه الخيار مثال اذا الحساب مبند او كلمه السر غير صحيحه", emoji="⚠️", value="مشكله في الحساب")
+            discord.SelectOption(
+                label="استفسار عام", 
+                description="للاستفسارات والأسئلة العامة", 
+                emoji="<:828044ticket:1527549672175046668>"
+            ),
+            discord.SelectOption(
+                label="شكوى / مشكلة", 
+                description="لتقديم شكوى أو الإبلاغ عن مشكلة", 
+                emoji="⚠️"
+            ),
+            discord.SelectOption(
+                label="شراء / طلب", 
+                description="لشراء منتج أو طلب خدمة", 
+                emoji="🛒"
+            )
         ]
-        super().__init__(placeholder="اختر خيار التذكرة", min_values=1, max_values=1, options=options, custom_id="ticket_select_menu_v10")
+        super().__init__(placeholder="اختر خيار التذكرة...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         guild = interaction.guild
-        category = interaction.channel.category
+        category = discord.utils.get(guild.categories, name="TICKETS") # اسم الكاتيجوري اللي تبيه ينفتح فيه التكت
+        if not category:
+            category = await guild.create_category("TICKETS")
 
+        # إعطاء صلاحيات الرؤية فقط لصاحب التذكرة والإدارة
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
-            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_channels=True)
+            # تقدر تضيف رتبة الإدارة هنا بمعرف الرتبة:
+            # guild.get_role(رتبة_الإدارة_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
 
-        ticket_name = f"ticket-{interaction.user.name}"
-        ticket_channel = await guild.create_text_channel(ticket_name, overwrites=overwrites, category=category)
-
-        embed = discord.Embed(
-            title=f"🎫 تذكرة جديدة: {self.values[0]}",
-            description=f"مرحباً بك {interaction.user.mention}\nتم فتح التذكرة بنجاح، يرجى الانتظار لحين رد الإدارة.",
-            color=discord.Color.green()
+        # إنشاء روم التذكرة
+        channel = await guild.create_text_channel(
+            name=f"ticket-{interaction.user.name}",
+            category=category,
+            overwrites=overwrites
         )
-        await ticket_channel.send(embed=embed, view=TicketActionView())
-        await interaction.response.send_message(f"✅ تم فتح تذكرتك بنجاح: {ticket_channel.mention}", ephemeral=True)
 
+        # رسالة داخل التكت مع منشن العضو ورتبة الإدارة (مثال توضيحي)
+        embed = discord.Embed(
+            title="<:828044ticket:1527549672175046668> تذكرة جديدة",
+            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا، وسيظهر لك فقط صاحب التكت والرتبة المختصة.\nMaDe FoR T7 STORE .",
+            color=0x9B59B6 # لون بنفسجي فخم
+        )
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
 
-class TicketSelectView(discord.ui.View):
+        # أزرار داخل التكت (قفل واستلام)
+        view = TicketControlView()
+        
+        # منشن الإدارة والعضو
+        staff_role_mention = "@here" # تقدر تبدلها بمنشن رتبة الإدارة الفعلي
+        await channel.send(content=f"{interaction.user.mention} {staff_role_mention}", embed=embed, view=view)
+        
+        await interaction.response.send_message(f"✅ تم فتح تذكرتك بنجاح: {channel.mention}", ephemeral=True)
+
+class TicketView(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
+# ----------------- أزرار التحكم داخل التكت -----------------
+class TicketControlView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="قفل التكت", style=discord.ButtonStyle.danger, emoji="🔒")
+    async def close_ticket(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.send_message("🔒 جاري إغلاق التذكرة خلال 5 ثوانٍ...")
+        import asyncio
+        await asyncio.sleep(5)
+        await interaction.channel.delete()
+
+    @discord.ui.button(label="استلام التكت", style=discord.ButtonStyle.success, emoji="🙋‍♂️")
+    async def claim_ticket(self, interaction: discord.Interaction, button: Button):
+        button.disabled = True
+        button.label = f"تم الاستلام بواسطة {interaction.user.name}"
+        await interaction.message.edit(view=self)
+        await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام هذه التذكرة وخدمتك!")
+
+# ----------------- أمر إرسال رسالة التذاكر الأساسية -----------------
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def setticket(ctx):
+    embed = discord.Embed(
+        title="<:828044ticket:1527549672175046668> مرحبًا بك في نظام التذاكر!",
+        description=(
+            "إذا كنت تحتاج مساعدة، أو لديك استفسار، أو تواجه مشكلة، أو ترغب بالتواصل مع الإدارة، اضغط على الزر أدناه لفتح تذكرة.\n\n"
+            "يرجى:\n"
+            "• شرح مشكلتك أو طلبك بوضوح.\n"
+            "• عدم فتح أكثر من تذكرة لنفس السبب.\n"
+            "• التحلي بالاحترام أثناء التحدث مع فريق الدعم.\n\n"
+            "<a:emoji_9:1534068709541548183> سيتم الرد عليك في أقرب وقت ممكن."
+        ),
+        color=0x9B59B6 # اللون البنفسجي الفخم
+    )
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+    
+    view = TicketView()
+    await ctx.send(embed=embed, view=view)
+    await ctx.message.delete() # حذف أمر الكاتب لتبقى الرسالة نظيفة
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user.name}")
-    try:
-        bot.tree.clear_commands(guild=None)
-        await bot.tree.sync()
-        print("Commands synced successfully.")
-    except Exception as e:
-        print(e)
+    print(f"Logged in as {bot.user.name} - T7 STORE Bot is ready!")
 
-
-# أمر إنشاء القائمة
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def panel(ctx):
-    embed = discord.Embed(
-        description="""🎟️ **مرحبًا بك في نظام التذاكر!**
-
-إذا كنت تحتاج مساعدة، أو لديك استفسار، أو تواجه مشكلة، أو ترغب بالتواصل مع الإدارة، اضغط على الزر أدناه لفتح تذكرة.
-
-**يرجى:**
-• شرح مشكلتك أو طلبك بوضوح.
-• عدم فتح أكثر من تذكرة لنفس السبب.
-• التحلي بالاحترام أثناء التحدث مع فريق الدعم.
-
-⏱️ **سيتم الرد عليك في أقرب وقت ممكن.**""",
-        color=discord.Color.from_rgb(45, 45, 45)
-    )
-    await ctx.send(embed=embed, view=TicketSelectView())
-
-
-# تشغيل سيرفر الويب وسحب التوكن بأمان من إعدادات Render
-if __name__ == "__main__":
-    keep_alive()
-    TOKEN = os.getenv("TOKEN")
-    if not TOKEN:
-        print("Error: TOKEN is not set in environment variables!")
-    else:
-        bot.run(TOKEN)
-        
+# ضع توكن بوتك هنا
+# bot.run("YOUR_BOT_TOKEN")
