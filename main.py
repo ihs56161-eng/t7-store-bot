@@ -5,7 +5,7 @@ from flask import Flask
 from threading import Thread
 import os
 
-# إعداد سيرفر الفلاسك عشان UptimeRobot يخليه صاحي 24/7
+# سيرفر الفلاسك عشان يبقى البوت صاحي 24/7 مع UptimeRobot
 app = Flask('')
 
 @app.route('/')
@@ -20,9 +20,10 @@ def keep_alive():
     t = Thread(target=run_flask)
     t.start()
 
-# إعدادات البوت
+# إعداد البوت
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
+# ----------------- القائمة المنسدلة للتذاكر -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -66,7 +67,8 @@ class TicketSelect(Select):
             description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{self.values[0]}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
-        embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url)
 
         view = TicketControlView()
         await channel.send(content=f"{interaction.user.mention} @here", embed=embed, view=view)
@@ -77,6 +79,7 @@ class TicketView(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
+# ----------------- أزرار التحكم داخل التكت -----------------
 class TicketControlView(View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -95,6 +98,7 @@ class TicketControlView(View):
         await interaction.message.edit(view=self)
         await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام التذكرة!")
 
+# ----------------- أمر إرسال رسالة التذاكر الأساسية -----------------
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def setticket(ctx):
@@ -106,7 +110,7 @@ async def setticket(ctx):
             "• شرح مشكلتك أو طلبك بوضوح.\n"
             "• عدم فتح أكثر من تذكرة لنفس السبب.\n"
             "• التحلي بالاحترام أثناء التحدث مع فريق الدعم.\n\n"
-            "<a:emoji_9:1534068709541548183> سيتم الرد عليك في أقرب وقت ممکن."
+            "<a:emoji_9:1534068709541548183> سيتم الرد عليك في أقرب وقت ممكن."
         ),
         color=0x9B59B6
     )
@@ -115,14 +119,18 @@ async def setticket(ctx):
     
     view = TicketView()
     await ctx.send(embed=embed, view=view)
-    await ctx.message.delete()
+    try:
+        await ctx.message.delete()
+    except:
+        pass
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name} - T7 STORE Bot is ready!")
 
-# تشغيل سيرفر الفلاسك في الخلفية أولاً
+# تشغيل السيرفر والبوت
 keep_alive()
 
-# تشغيل البوت بالتوكن حقك (حط التوكن بين العلامتين)
-bot.run("حط_التوكن_هنا")
+# سحب التوكن خفياً من إعدادات البيئة (Environment Variables) في Render
+TOKEN = os.environ.get("TOKEN")
+bot.run(TOKEN)
