@@ -30,7 +30,7 @@ ROLE_STAFF = 1525954290450043091     # رتبة الاستاف (للإستفسا
 ROLE_SCAM = 1533127895390621866      # رتبة تشهير السراقين
 # ==========================================
 
-# ----------------- القائمة المنسدلة للتذاكر -----------------
+# ----------------- القائمة المنسدلة للتذاكر الرئيسية -----------------
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -59,15 +59,7 @@ class TicketSelect(Select):
             category = await guild.create_category("TICKETS")
 
         selected_value = self.values[0]
-        target_role_id = None
-
-        # ربط كل خيار بالآييدي الصحيح
-        if selected_value == "استفسار":
-            target_role_id = ROLE_STAFF
-        elif selected_value == "شكوى":
-            target_role_id = ROLE_STAFF
-        elif selected_value == "تشهير سراقين":
-            target_role_id = ROLE_SCAM
+        target_role_id = ROLE_STAFF if selected_value in ["استفسار", "شكوى"] else ROLE_SCAM
 
         # إنشاء الروم (مرئي للجميع)
         channel = await guild.create_text_channel(
@@ -77,20 +69,19 @@ class TicketSelect(Select):
 
         embed = discord.Embed(
             title="<:emoji_10:1534076771039838370> تذكرة جديدة",
-            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{selected_value}**\n\nاكتب تفاصيلك هنا.\nMaDe FoR T7 STORE .",
+            description=f"مرحباً بك {interaction.user.mention}!\nنوع التذكرة: **{selected_value}**\n\nاكتب تفاصيلك هنا.\nسيقوم الإستاف بالرد عليك قريباً.\nMaDe FoR T7 STORE .",
             color=0x9B59B6
         )
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
-        view = TicketControlView()
+        # إرسال الأزرار المخصصة للإستاف فقط داخل التذكرة
+        view = StaffControlView()
         
-        # تجهيز المنشن (صاحب التذكرة + الرتبة المخصصة للقسم)
         ping_content = f"{interaction.user.mention}"
-        if target_role_id:
-            role = guild.get_role(target_role_id)
-            if role:
-                ping_content += f" {role.mention}"
+        role = guild.get_role(target_role_id)
+        if role:
+            ping_content += f" {role.mention}"
 
         await channel.send(content=ping_content, embed=embed, view=view)
         await interaction.response.send_message(f"✅ تم فتح تذكرتك بنجاح: {channel.mention}", ephemeral=True)
@@ -100,10 +91,30 @@ class TicketView(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-# ----------------- أزرار التحكم داخل التكت -----------------
-class TicketControlView(View):
+# ----------------- أزرار التحكم الخاصة بالإستاف فقط -----------------
+class StaffControlView(View):
     def __init__(self):
         super().__init__(timeout=None)
+
+    # التحقق مما إذا كان المستخدم يمتلك رتبة الإستاف أو صلاّحية الأدمن قبل تنفيذ الأزرار
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # السماح للأدمن أو من يحمل رتبة الإستاف أو السراقين بالضغط على الأزرار
+        has_permission = any(role.id in [ROLE_STAFF, ROLE_SCAM] for role in interaction.user.roles) or interaction.user.guild_permissions.administrator
+        
+        if not has_permission:
+            await interaction.response.send_message("❌ عذراً، هذه الأزرار مخصصة للإستاف فقط!", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="استلام التكت", style=discord.ButtonStyle.success, emoji="🙋‍♂️")
+    async def claim_ticket(self, interaction: discord.Interaction, button: Button):
+        button.disabled = True
+        button.label = f"تم الاستلام بواسطة {interaction.user.name}"
+        
+        # إضافة زر إلغاء الاستلام وتحديث اللوحة
+        self.add_item(UnclaimButton())
+        await interaction.message.edit(view=self)
+        await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام التذكرة!")
 
     @discord.ui.button(label="قفل التكت", style=discord.ButtonStyle.danger, emoji="🔒")
     async def close_ticket(self, interaction: discord.Interaction, button: Button):
@@ -112,12 +123,22 @@ class TicketControlView(View):
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
-    @discord.ui.button(label="استلام التكت", style=discord.ButtonStyle.success, emoji="🙋‍♂️")
-    async def claim_ticket(self, interaction: discord.Interaction, button: Button):
-        button.disabled = True
-        button.label = f"تم الاستلام بواسطة {interaction.user.name}"
-        await interaction.message.edit(view=self)
-        await interaction.response.send_message(f"🙋‍♂️ قام الإداري {interaction.user.mention} باستلام التذكرة!")
+# زر إضافي: إلغاء الاستلام
+class UnclaimButton(Button):
+    def __init__(self):
+        super().__init__(label="إلغاء الاستلام", style=discord.ButtonStyle.secondary, emoji="↩️")
+
+    async def callback(self, interaction: discord.Interaction):
+        # إعادة تفعيل زر الاستلام الأصلي أو تعديله
+        for child in self.view.children:
+            if child.label and "تم الاستلام" in child.label:
+                child.disabled = False
+                child.label = "استلام التكت"
+        
+        # إزالة زر إلغاء الاستلام نفسه من القائمة
+        self.view.remove_item(self)
+        await interaction.message.edit(view=self.view)
+        await interaction.response.send_message(f"↩️ تم إلغاء استلام التذكرة بواسطة {interaction.user.mention}", ephemeral=True)
 
 # ----------------- أمر إرسال رسالة التذاكر الأساسية -----------------
 @bot.command()
